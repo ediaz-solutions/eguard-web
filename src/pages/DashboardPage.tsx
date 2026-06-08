@@ -20,8 +20,9 @@ function Stat({ icon: I, label, value, color }: {
 }
 
 function Badge({ type }: { type: string }) {
-  const s = type === 'logoff_executed' ? 'bg-red-500/10 text-red-400'
-    : type === 'warning_shown' ? 'bg-amber-500/10 text-amber-400'
+  const s = type === 'logoff_executed'   ? 'bg-red-500/10 text-red-400'
+    : type === 'warning_shown'           ? 'bg-amber-500/10 text-amber-400'
+    : type === 'watchdog_alert'          ? 'bg-red-500/10 text-red-400'
     : type.includes('error') || type === 'policy_not_found' ? 'bg-orange-500/10 text-orange-400'
     : 'bg-surface-700/50 text-surface-400';
   return <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${s}`}>{EVENT_LABELS[type] || type}</span>;
@@ -49,12 +50,44 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat icon={Monitor} label="Dispositivos" value={stats.totalDevices} color="bg-surface-700/50 text-surface-300" />
-        <Stat icon={MonitorCheck} label="Online" value={stats.onlineDevices} color="bg-emerald-500/10 text-emerald-400" />
-        <Stat icon={MonitorX} label="Offline" value={stats.offlineDevices} color="bg-surface-700/50 text-surface-400" />
-        <Stat icon={Clock} label="Perfis ativos" value={stats.activePolicies} color="bg-navy-600/15 text-navy-400" />
+        <Stat icon={Monitor}      label="Dispositivos"  value={stats.totalDevices}   color="bg-surface-700/50 text-surface-300" />
+        <Stat icon={MonitorCheck} label="Online"        value={stats.onlineDevices}  color="bg-emerald-500/10 text-emerald-400" />
+        <Stat icon={MonitorX}     label="Offline"       value={stats.offlineDevices} color="bg-surface-700/50 text-surface-400" />
+        <Stat icon={Clock}        label="Perfis ativos" value={stats.activePolicies} color="bg-navy-600/15 text-navy-400" />
       </div>
+
+      {/* Hora Extra hoje */}
+      {stats.todayOverrides.length > 0 && (
+        <div className="card">
+          <div className="px-5 py-4 border-b border-surface-800 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-emerald-400" />
+            <h2 className="font-semibold text-surface-100">Hora Extra ativa hoje</h2>
+            <span className="ml-auto text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              {stats.todayOverrides.length} dispositivo(s)
+            </span>
+          </div>
+          <div className="divide-y divide-surface-800/50">
+            {stats.todayOverrides.map(ov => (
+              <div key={ov.id} className="px-5 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Monitor className="w-4 h-4 text-surface-500" />
+                  <div>
+                    <span className="text-sm font-medium text-surface-200 font-mono">{ov.deviceHostname}</span>
+                    {ov.reason && (
+                      <p className="text-xs text-surface-500 mt-0.5">{ov.reason}</p>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/20">
+                  até {ov.extendedEnd.slice(0, 5)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Devices */}

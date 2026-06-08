@@ -32,6 +32,17 @@ export interface AgentLog {
   sentAt: string;
 }
 
+export interface DeviceOverride {
+  id: string;
+  deviceId: string;
+  deviceHostname: string;
+  overrideDate: string;   // 'YYYY-MM-DD'
+  extendedEnd: string;    // 'HH:mm:ss'
+  reason: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
 export interface DashboardStats {
   totalDevices: number;
   onlineDevices: number;
@@ -40,6 +51,7 @@ export interface DashboardStats {
   recentLogoffs: number;
   recentLogs: AgentLog[];
   devices: Device[];
+  todayOverrides: DeviceOverride[];
 }
 
 export const DAY_LABELS: Record<string, string> = {
@@ -58,5 +70,6 @@ export const EVENT_LABELS: Record<string, string> = {
   warning_shown: 'Aviso exibido',
   logoff_executed: 'Logoff executado',
   logoff_cancelled: 'Logoff cancelado',
+  watchdog_alert: 'Watchdog alerta',
   api_error: 'Erro na API',
 };

@@ -1,4 +1,4 @@
-import type { Device, Policy, AgentLog } from '../types';
+import type { Device, Policy, AgentLog, DeviceOverride } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -46,6 +46,21 @@ class ApiClient {
   // Logs
   getDeviceLogs = (deviceId: string, limit = 100) =>
     this.req<AgentLog[]>(`/api/v1/logs/${deviceId}?limit=${limit}`);
+
+  // Hora Extra (overrides)
+  getTodayOverrides = () =>
+    this.req<DeviceOverride[]>('/api/v1/overrides/today');
+  getDeviceOverrides = (deviceId: string) =>
+    this.req<DeviceOverride[]>(`/api/v1/overrides/${deviceId}`);
+  createOverride = (data: {
+    deviceId: string;
+    overrideDate: string;   // 'YYYY-MM-DD'
+    extendedEnd: string;    // 'HH:mm:ss'
+    reason?: string;
+    createdBy?: string;
+  }) => this.req<DeviceOverride>('/api/v1/overrides', { method: 'POST', body: JSON.stringify(data) });
+  deleteOverride = (id: string) =>
+    this.req<void>(`/api/v1/overrides/${id}`, { method: 'DELETE' });
 
   // Validate
   validateToken = async () => { try { await this.getDevices(); return true; } catch { return false; } };
