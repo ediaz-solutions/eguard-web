@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
-import type { Device, Policy, AgentLog, DashboardStats, DeviceOverride } from '../types';
+import type { Device, Policy, AgentLog, DashboardStats, DeviceOverride, WindowsUser } from '../types';
 
 function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
@@ -18,8 +18,9 @@ function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
   return { data, loading, error, reload, setData };
 }
 
-export const useDevices  = () => useAsync<Device[]>(() => api.getDevices());
-export const usePolicies = () => useAsync<Policy[]>(() => api.getPolicies());
+export const useDevices      = () => useAsync<Device[]>(() => api.getDevices());
+export const useWindowsUsers = () => useAsync<WindowsUser[]>(() => api.getWindowsUsers());
+export const usePolicies     = () => useAsync<Policy[]>(() => api.getPolicies());
 export const useDeviceLogs = (id: string | null) =>
   useAsync<AgentLog[]>(() => id ? api.getDeviceLogs(id) : Promise.resolve([]), [id]);
 export const useDeviceOverrides = (id: string | null) =>

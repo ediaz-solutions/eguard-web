@@ -4,21 +4,27 @@ import { ArrowRight, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function LoginPage() {
-  const [token, setToken] = useState('');
-  const [companyId, setCompanyId] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const nav = useNavigate();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!token.trim() || !companyId.trim()) { setError('Preencha todos os campos'); return; }
+    if (!email.trim() || !password) { setError('Preencha todos os campos'); return; }
     setLoading(true); setError('');
-    api.setToken(token.trim());
-    api.setCompanyId(companyId.trim());
-    if (await api.validateToken()) nav('/');
-    else { setError('Token ou Company ID inválido'); api.clearToken(); }
-    setLoading(false);
+
+    const { error: authError } = await api.signIn(email.trim(), password);
+    if (authError) {
+      setError(authError.message === 'Invalid login credentials'
+        ? 'E-mail ou senha inválidos'
+        : authError.message);
+      setLoading(false);
+      return;
+    }
+
+    nav('/');
   }
 
   return (
@@ -37,16 +43,16 @@ export default function LoginPage() {
 
         <form onSubmit={submit} className="card p-7 space-y-5">
           <div>
-            <label className="block text-sm font-medium text-surface-300 mb-2">Company ID</label>
-            <input type="text" className="input-field font-mono text-sm"
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              value={companyId} onChange={e => setCompanyId(e.target.value)} autoFocus />
+            <label className="block text-sm font-medium text-surface-300 mb-2">E-mail</label>
+            <input type="email" className="input-field text-sm"
+              placeholder="admin@empresa.com"
+              value={email} onChange={e => setEmail(e.target.value)} autoFocus />
           </div>
           <div>
-            <label className="block text-sm font-medium text-surface-300 mb-2">Token do Agente</label>
-            <input type="password" className="input-field font-mono text-sm"
-              placeholder="Token de autenticação"
-              value={token} onChange={e => setToken(e.target.value)} />
+            <label className="block text-sm font-medium text-surface-300 mb-2">Senha</label>
+            <input type="password" className="input-field text-sm"
+              placeholder="••••••••"
+              value={password} onChange={e => setPassword(e.target.value)} />
           </div>
 
           {error && (

@@ -1,16 +1,23 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Monitor, Clock, ScrollText, LogOut } from 'lucide-react';
+import { LayoutDashboard, Monitor, Users, Clock, ScrollText, Key, LogOut } from 'lucide-react';
 import { api } from '../../services/api';
 
 const NAV = [
-  { to: '/',         icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/devices',  icon: Monitor,         label: 'Dispositivos' },
-  { to: '/policies', icon: Clock,           label: 'Perfis de Horário' },
-  { to: '/logs',     icon: ScrollText,      label: 'Logs' },
+  { to: '/',         icon: LayoutDashboard, label: 'Dashboard',       end: true },
+  { to: '/devices',  icon: Monitor,         label: 'Dispositivos',    end: false },
+  { to: '/users',    icon: Users,           label: 'Usuários Windows', end: false },
+  { to: '/policies', icon: Clock,           label: 'Perfis de Horário', end: false },
+  { to: '/logs',     icon: ScrollText,      label: 'Logs',            end: false },
+  { to: '/tokens',   icon: Key,             label: 'Tokens de Acesso', end: false },
 ];
 
 export default function AppLayout() {
   const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await api.signOut();
+    navigate('/login');
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -30,7 +37,7 @@ export default function AppLayout() {
             <NavLink
               key={n.to}
               to={n.to}
-              end={n.to === '/'}
+              end={n.end}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
@@ -47,7 +54,7 @@ export default function AppLayout() {
 
         <div className="p-3 border-t border-surface-800">
           <button
-            onClick={() => { api.clearToken(); navigate('/login'); }}
+            onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
                        text-surface-500 hover:text-red-400 hover:bg-red-500/5 w-full transition-all"
           >

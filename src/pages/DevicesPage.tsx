@@ -29,6 +29,7 @@ function OverrideModal({ deviceId, deviceHostname, existing, onClose, onSaved }:
     try {
       await api.createOverride({
         deviceId,
+        overrideType: 'device',
         overrideDate: date,
         extendedEnd:  time + ':00',
         reason:       reason || undefined,
@@ -136,7 +137,7 @@ export default function DevicesPage() {
   useState(() => {
     api.getTodayOverrides().then(list => {
       const map: Record<string, DeviceOverride> = {};
-      list.forEach(ov => { map[ov.deviceId] = ov; });
+      list.forEach(ov => { if (ov.deviceId) map[ov.deviceId] = ov; });
       setDeviceOverrides(map);
     }).catch(() => {});
   });
@@ -144,7 +145,7 @@ export default function DevicesPage() {
   function reloadOverrides() {
     api.getTodayOverrides().then(list => {
       const map: Record<string, DeviceOverride> = {};
-      list.forEach(ov => { map[ov.deviceId] = ov; });
+      list.forEach(ov => { if (ov.deviceId) map[ov.deviceId] = ov; });
       setDeviceOverrides(map);
     }).catch(() => {});
   }

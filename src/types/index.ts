@@ -32,15 +32,37 @@ export interface AgentLog {
   sentAt: string;
 }
 
+export interface WindowsUser {
+  id: string;
+  username: string;
+  displayName: string | null;
+  active: boolean;
+  lastSeenAt: string | null;
+  lastDeviceHostname: string | null;
+  createdAt: string;
+}
+
 export interface DeviceOverride {
   id: string;
-  deviceId: string;
+  deviceId: string | null;
+  windowsUserId: string | null;
+  overrideType: 'device' | 'user';
   deviceHostname: string;
   overrideDate: string;   // 'YYYY-MM-DD'
   extendedEnd: string;    // 'HH:mm:ss'
   reason: string | null;
   createdBy: string | null;
   createdAt: string;
+}
+
+export interface CompanyToken {
+  id: string;
+  name: string;
+  maxDevices: number | null;
+  active: boolean;
+  createdAt: string;
+  expiresAt: string | null;
+  rawToken?: string; // only on create
 }
 
 export interface DashboardStats {
