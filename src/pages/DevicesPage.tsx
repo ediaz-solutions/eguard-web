@@ -172,7 +172,9 @@ export default function DevicesPage() {
   }
 
   function getDevicePolicy(deviceId: string): Policy | undefined {
-    return policies?.find(p => p.targetType === 'device' && p.targetId === deviceId);
+    return policies?.find(p =>
+      p.assignments.some(a => a.targetType === 'device' && a.targetId === deviceId),
+    );
   }
 
   return (

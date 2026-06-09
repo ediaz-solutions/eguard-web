@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Users, Power, PowerOff, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, Power, PowerOff, AlertCircle, RefreshCw, Clock } from 'lucide-react';
+import { usePolicies } from '../hooks/useData';
 import { api } from '../services/api';
-import { timeAgo } from '../utils';
+import { timeAgo, formatTime } from '../utils';
 import type { WindowsUser } from '../types';
 
 export default function WindowsUsersPage() {
   const [users, setUsers] = useState<WindowsUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { data: policies } = usePolicies();
+
+  function getUserPolicy(userId: string) {
+    return policies?.find(p =>
+      p.assignments.some(a => a.targetType === 'user' && a.targetId === userId),
+    );
+  }
 
   async function load() {
     setLoading(true); setError('');
@@ -94,6 +102,7 @@ export default function WindowsUsersPage() {
             <thead>
               <tr className="border-b border-surface-800">
                 <th className="text-left px-5 py-3 text-surface-500 font-medium">Usuário</th>
+                <th className="text-left px-5 py-3 text-surface-500 font-medium">Perfil de horário</th>
                 <th className="text-left px-5 py-3 text-surface-500 font-medium">Último dispositivo</th>
                 <th className="text-left px-5 py-3 text-surface-500 font-medium">Último acesso</th>
                 <th className="text-left px-5 py-3 text-surface-500 font-medium">Status</th>
@@ -108,6 +117,20 @@ export default function WindowsUsersPage() {
                     {u.displayName && (
                       <div className="text-surface-500 text-xs">{u.displayName}</div>
                     )}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {(() => {
+                      const p = getUserPolicy(u.id);
+                      return p ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded
+                                         bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                          <Clock className="w-3 h-3" />
+                          {p.name || 'Perfil'}: {formatTime(p.timeStart)}–{formatTime(p.timeEnd)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-surface-600">—</span>
+                      );
+                    })()}
                   </td>
                   <td className="px-5 py-3.5 text-surface-400 font-mono text-xs">
                     {u.lastDeviceHostname ?? '—'}

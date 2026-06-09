@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type {
-  Device, Policy, AgentLog, DeviceOverride, WindowsUser, CompanyToken,
+  Device, Policy, PolicyAssignment, AgentLog, DeviceOverride, WindowsUser, CompanyToken,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -64,11 +64,20 @@ class ApiClient {
 
   // ── Policies ─────────────────────────────────────────────────────────────────
   getPolicies = () => this.req<Policy[]>('/api/v1/policies');
-  createPolicy = (data: Record<string, unknown>) =>
+  createPolicy = (data: { name?: string; allowedDays: string[]; timeStart: string; timeEnd: string; warnMinutes: number; action?: string }) =>
     this.req<Policy>('/api/v1/policies', { method: 'POST', body: JSON.stringify(data) });
-  updatePolicy = (id: string, data: Record<string, unknown>) =>
+  updatePolicy = (id: string, data: { name?: string; allowedDays: string[]; timeStart: string; timeEnd: string; warnMinutes: number; action?: string }) =>
     this.req<Policy>(`/api/v1/policies/${id}`, { method: 'PUT', body: JSON.stringify(data) });
   deletePolicy = (id: string) => this.req<void>(`/api/v1/policies/${id}`, { method: 'DELETE' });
+
+  // ── Assignments ──────────────────────────────────────────────────────────────
+  createAssignment = (policyId: string, targetType: 'device' | 'user', targetId: string) =>
+    this.req<PolicyAssignment>('/api/v1/assignments', {
+      method: 'POST',
+      body: JSON.stringify({ policyId, targetType, targetId }),
+    });
+  deleteAssignment = (id: string) =>
+    this.req<void>(`/api/v1/assignments/${id}`, { method: 'DELETE' });
 
   // ── Logs ─────────────────────────────────────────────────────────────────────
   getDeviceLogs = (deviceId: string, limit = 100) =>

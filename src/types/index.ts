@@ -7,12 +7,16 @@ export interface Device {
   agentToken?: string;
 }
 
-export interface Policy {
+export interface PolicyAssignment {
   id: string;
-  companyId: string;
-  name: string;
   targetType: 'device' | 'user';
   targetId: string;
+  createdAt: string;
+}
+
+export interface Policy {
+  id: string;
+  name: string | null;
   allowedDays: string[];
   timeStart: string;
   timeEnd: string;
@@ -20,6 +24,7 @@ export interface Policy {
   action: string;
   active: boolean;
   createdAt: string;
+  assignments: PolicyAssignment[];
 }
 
 export interface AgentLog {
