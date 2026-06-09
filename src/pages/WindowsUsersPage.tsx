@@ -1,31 +1,79 @@
 import { useState, useEffect } from 'react';
-import { Users, Power, PowerOff, AlertCircle, RefreshCw, Clock } from 'lucide-react';
+import { Users, Power, PowerOff, AlertCircle, RefreshCw, ChevronDown } from 'lucide-react';
 import { usePolicies } from '../hooks/useData';
 import { api } from '../services/api';
-import { timeAgo, formatTime } from '../utils';
+import { timeAgo } from '../utils';
 import type { WindowsUser } from '../types';
 
-export default function WindowsUsersPage() {
-  const [users, setUsers] = useState<WindowsUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const { data: policies } = usePolicies();
+// ── Policy selector ───────────────────────────────────────────────────────────
 
-  function getUserPolicy(userId: string) {
-    return policies?.find(p =>
-      p.assignments.some(a => a.targetType === 'user' && a.targetId === userId),
-    );
+interface PolicySelectorProps {
+  userId: string;
+  currentPolicyId: string | undefined;
+  onChanged: () => void;
+}
+
+function PolicySelector({ userId, currentPolicyId, onChanged }: PolicySelectorProps) {
+  const { data: policies } = usePolicies();
+  const [busy, setBusy] = useState(false);
+
+  async function handleChange(newPolicyId: string) {
+    setBusy(true);
+    try {
+      if (newPolicyId === '') {
+        const existing = policies
+          ?.flatMap(p => p.assignments)
+          .find(a => a.targetType === 'user' && a.targetId === userId);
+        if (existing) await api.deleteAssignment(existing.id);
+      } else {
+        await api.createAssignment(newPolicyId, 'user', userId);
+      }
+      onChanged();
+    } catch { /* silent */ } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="relative inline-flex items-center">
+      <select
+        value={currentPolicyId ?? ''}
+        disabled={busy}
+        onChange={e => handleChange(e.target.value)}
+        className={`appearance-none pl-2.5 pr-7 py-1 rounded-lg text-xs border transition-all cursor-pointer
+          disabled:opacity-50 disabled:cursor-wait
+          ${currentPolicyId
+            ? 'bg-brand-600/10 text-brand-300 border-brand-600/25 hover:bg-brand-600/15'
+            : 'bg-surface-800 text-surface-400 border-surface-700 hover:bg-surface-700'
+          }`}
+      >
+        <option value="">Sem perfil</option>
+        {(policies ?? []).map(p => (
+          <option key={p.id} value={p.id}>{p.name || 'Sem nome'}</option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-1.5 w-3 h-3 pointer-events-none text-surface-500" />
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+export default function WindowsUsersPage() {
+  const [users, setUsers]   = useState<WindowsUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState('');
+  const { data: policies, reload: reloadPolicies } = usePolicies();
+
+  function getUserPolicyId(userId: string): string | undefined {
+    return policies
+      ?.find(p => p.assignments.some(a => a.targetType === 'user' && a.targetId === userId))
+      ?.id;
   }
 
   async function load() {
     setLoading(true); setError('');
-    try {
-      setUsers(await api.getWindowsUsers());
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao carregar usuários');
-    } finally {
-      setLoading(false);
-    }
+    try { setUsers(await api.getWindowsUsers()); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erro ao carregar usuários'); }
+    finally { setLoading(false); }
   }
 
   useEffect(() => { load(); }, []);
@@ -34,12 +82,10 @@ export default function WindowsUsersPage() {
     try {
       const updated = await api.setUserActive(user.id, !user.active);
       setUsers(prev => prev.map(u => u.id === user.id ? updated : u));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro');
-    }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erro'); }
   }
 
-  const active = users.filter(u => u.active);
+  const active   = users.filter(u => u.active);
   const inactive = users.filter(u => !u.active);
 
   return (
@@ -118,20 +164,16 @@ export default function WindowsUsersPage() {
                       <div className="text-surface-500 text-xs">{u.displayName}</div>
                     )}
                   </td>
+
+                  {/* ── Policy selector ── */}
                   <td className="px-5 py-3.5">
-                    {(() => {
-                      const p = getUserPolicy(u.id);
-                      return p ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded
-                                         bg-brand-500/10 text-brand-300 border border-brand-500/20">
-                          <Clock className="w-3 h-3" />
-                          {p.name || 'Perfil'}: {formatTime(p.timeStart)}–{formatTime(p.timeEnd)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-surface-600">—</span>
-                      );
-                    })()}
+                    <PolicySelector
+                      userId={u.id}
+                      currentPolicyId={getUserPolicyId(u.id)}
+                      onChanged={reloadPolicies}
+                    />
                   </td>
+
                   <td className="px-5 py-3.5 text-surface-400 font-mono text-xs">
                     {u.lastDeviceHostname ?? '—'}
                   </td>
@@ -148,14 +190,12 @@ export default function WindowsUsersPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <button
-                      onClick={() => toggleActive(u)}
+                    <button onClick={() => toggleActive(u)}
                       title={u.active ? 'Desativar' : 'Ativar'}
-                      className="p-1.5 rounded-lg hover:bg-surface-700 text-surface-500 hover:text-surface-300 transition-all"
-                    >
+                      className="p-1.5 rounded-lg hover:bg-surface-700 text-surface-500 hover:text-surface-300 transition-all">
                       {u.active
                         ? <PowerOff className="w-4 h-4 text-red-400" />
-                        : <Power className="w-4 h-4 text-green-400" />}
+                        : <Power   className="w-4 h-4 text-green-400" />}
                     </button>
                   </td>
                 </tr>

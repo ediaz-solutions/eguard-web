@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Monitor, Plus, Power, PowerOff, Copy, Check, AlertCircle, Link, Clock, Trash2, X } from 'lucide-react';
+import { Monitor, Plus, Power, PowerOff, Copy, Check, AlertCircle, Clock, Trash2, X, ChevronDown } from 'lucide-react';
 import { useDevices, usePolicies } from '../hooks/useData';
 import { api } from '../services/api';
 import { timeAgo, formatTime } from '../utils';
-import { DAY_LABELS, ALL_DAYS, type Policy, type DeviceOverride } from '../types';
+import { DAY_LABELS, ALL_DAYS, type DeviceOverride } from '../types';
 
 // ── Hora Extra modal ──────────────────────────────────────────────────────────
 
@@ -34,13 +34,10 @@ function OverrideModal({ deviceId, deviceHostname, existing, onClose, onSaved }:
         extendedEnd:  time + ':00',
         reason:       reason || undefined,
       });
-      onSaved();
-      onClose();
+      onSaved(); onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao salvar');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function handleDelete() {
@@ -67,10 +64,8 @@ function OverrideModal({ deviceId, deviceHostname, existing, onClose, onSaved }:
           <div>
             <label className="block text-xs text-surface-400 mb-1.5">Data</label>
             <input type="date" value={date} min={today}
-              onChange={e => setDate(e.target.value)}
-              className="input-field w-full" />
+              onChange={e => setDate(e.target.value)} className="input-field w-full" />
           </div>
-
           <div>
             <label className="block text-xs text-surface-400 mb-1.5">Novo horário de fim</label>
             <input type="time" value={time} onChange={e => setTime(e.target.value)}
@@ -79,14 +74,11 @@ function OverrideModal({ deviceId, deviceHostname, existing, onClose, onSaved }:
               O agente usará este horário como fim do turno nessa data.
             </p>
           </div>
-
           <div>
             <label className="block text-xs text-surface-400 mb-1.5">Motivo (opcional)</label>
             <input type="text" value={reason} onChange={e => setReason(e.target.value)}
-              placeholder="Ex: Reunião até mais tarde"
-              className="input-field w-full" />
+              placeholder="Ex: Reunião até mais tarde" className="input-field w-full" />
           </div>
-
           {error && (
             <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 rounded-lg px-4 py-3 border border-red-500/20">
               <AlertCircle className="w-4 h-4 shrink-0" />{error}
@@ -101,9 +93,7 @@ function OverrideModal({ deviceId, deviceHostname, existing, onClose, onSaved }:
               <Trash2 className="w-4 h-4" />Remover hora extra
             </button>
           )}
-          <button onClick={onClose} disabled={saving} className="btn-secondary text-sm ml-auto">
-            Cancelar
-          </button>
+          <button onClick={onClose} disabled={saving} className="btn-secondary text-sm ml-auto">Cancelar</button>
           <button onClick={handleSave} disabled={saving || !time} className="btn-primary text-sm">
             {saving ? 'Salvando...' : existing ? 'Atualizar' : 'Confirmar'}
           </button>
@@ -113,19 +103,70 @@ function OverrideModal({ deviceId, deviceHostname, existing, onClose, onSaved }:
   );
 }
 
+// ── Policy selector dropdown ──────────────────────────────────────────────────
+
+interface PolicySelectorProps {
+  deviceId: string;
+  currentPolicyId: string | undefined;
+  onChanged: () => void;
+}
+
+function PolicySelector({ deviceId, currentPolicyId, onChanged }: PolicySelectorProps) {
+  const { data: policies } = usePolicies();
+  const [busy, setBusy] = useState(false);
+
+  async function handleChange(newPolicyId: string) {
+    setBusy(true);
+    try {
+      if (newPolicyId === '') {
+        // remove existing assignment
+        const existing = policies
+          ?.flatMap(p => p.assignments)
+          .find(a => a.targetType === 'device' && a.targetId === deviceId);
+        if (existing) await api.deleteAssignment(existing.id);
+      } else {
+        await api.createAssignment(newPolicyId, 'device', deviceId);
+      }
+      onChanged();
+    } catch { /* silent */ } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="relative inline-flex items-center">
+      <select
+        value={currentPolicyId ?? ''}
+        disabled={busy}
+        onChange={e => handleChange(e.target.value)}
+        className={`appearance-none pl-2.5 pr-7 py-1 rounded-lg text-xs border transition-all cursor-pointer
+          disabled:opacity-50 disabled:cursor-wait
+          ${currentPolicyId
+            ? 'bg-brand-600/10 text-brand-300 border-brand-600/25 hover:bg-brand-600/15'
+            : 'bg-surface-800 text-surface-400 border-surface-700 hover:bg-surface-700'
+          }`}
+      >
+        <option value="">Sem perfil</option>
+        {(policies ?? []).map(p => (
+          <option key={p.id} value={p.id}>{p.name || 'Sem nome'}</option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-1.5 w-3 h-3 pointer-events-none text-surface-500" />
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function DevicesPage() {
   const { data: devices, loading, reload } = useDevices();
-  const { data: policies } = usePolicies();
-  const [showForm, setShowForm] = useState(false);
-  const [hostname, setHostname] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [newToken, setNewToken] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState('');
+  const { data: policies, reload: reloadPolicies } = usePolicies();
 
-  // Hora Extra state
+  const [showForm, setShowForm]   = useState(false);
+  const [hostname, setHostname]   = useState('');
+  const [creating, setCreating]   = useState(false);
+  const [newToken, setNewToken]   = useState('');
+  const [copied, setCopied]       = useState(false);
+  const [error, setError]         = useState('');
+
   const [overrideModal, setOverrideModal] = useState<{
     deviceId: string;
     deviceHostname: string;
@@ -133,7 +174,6 @@ export default function DevicesPage() {
   } | null>(null);
   const [deviceOverrides, setDeviceOverrides] = useState<Record<string, DeviceOverride>>({});
 
-  // Load today's overrides for all devices on mount
   useState(() => {
     api.getTodayOverrides().then(list => {
       const map: Record<string, DeviceOverride> = {};
@@ -171,10 +211,18 @@ export default function DevicesPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function getDevicePolicy(deviceId: string): Policy | undefined {
-    return policies?.find(p =>
+  function getDevicePolicyId(deviceId: string): string | undefined {
+    return policies
+      ?.find(p => p.assignments.some(a => a.targetType === 'device' && a.targetId === deviceId))
+      ?.id;
+  }
+
+  function getDevicePolicyLabel(deviceId: string): string | undefined {
+    const p = policies?.find(p =>
       p.assignments.some(a => a.targetType === 'device' && a.targetId === deviceId),
     );
+    if (!p) return undefined;
+    return `${p.name || 'Perfil'}: ${formatTime(p.timeStart)}–${formatTime(p.timeEnd)}`;
   }
 
   return (
@@ -252,7 +300,7 @@ export default function DevicesPage() {
               <p>Nenhum dispositivo cadastrado</p>
             </div>
           ) : devices.map(d => {
-            const policy    = getDevicePolicy(d.id);
+            const policyId  = getDevicePolicyId(d.id);
             const activeOv  = deviceOverrides[d.id] ?? null;
 
             return (
@@ -271,30 +319,21 @@ export default function DevicesPage() {
                           ? <span className="badge-online"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />Online</span>
                           : <span className="badge-offline">Offline</span>}
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1.5">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-2">
                         <span className="text-xs text-surface-500">Visto {timeAgo(d.lastSeenAt)}</span>
 
-                        {policy ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs text-navy-400 bg-navy-600/10 px-2 py-0.5 rounded border border-navy-600/15">
-                            <Link className="w-3 h-3" />
-                            {policy.name || 'Perfil'}: {formatTime(policy.timeStart)}–{formatTime(policy.timeEnd)}
-                            <span className="text-navy-500 ml-1">
-                              {policy.allowedDays.map(day => DAY_LABELS[day]).join(', ')}
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="text-xs text-amber-500/70 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/10">
-                            Sem perfil vinculado
-                          </span>
-                        )}
+                        {/* ── Policy selector ── */}
+                        <PolicySelector
+                          deviceId={d.id}
+                          currentPolicyId={policyId}
+                          onChanged={reloadPolicies}
+                        />
 
                         {activeOv && (
                           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                             <Clock className="w-3 h-3" />
                             Hora extra até {activeOv.extendedEnd.slice(0, 5)}
-                            {activeOv.reason && (
-                              <span className="text-emerald-500/70 ml-0.5">· {activeOv.reason}</span>
-                            )}
+                            {activeOv.reason && <span className="text-emerald-500/70 ml-0.5">· {activeOv.reason}</span>}
                           </span>
                         )}
                       </div>
@@ -302,7 +341,6 @@ export default function DevicesPage() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {/* Hora Extra button */}
                     <button
                       onClick={() => setOverrideModal({ deviceId: d.id, deviceHostname: d.hostname, existing: activeOv })}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
@@ -315,7 +353,6 @@ export default function DevicesPage() {
                       {activeOv ? 'Hora extra ativa' : 'Hora extra'}
                     </button>
 
-                    {/* Enable/disable */}
                     <button onClick={() => toggle(d.id, d.active)}
                       className={`p-2 rounded-lg transition-colors ${
                         d.active
