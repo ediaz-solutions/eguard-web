@@ -44,8 +44,15 @@ class ApiClient {
     }
     if (res.status === 204) return undefined as T;
     if (!res.ok) {
-      const e = await res.json().catch(() => ({ error: `Erro ${res.status}` }));
-      throw new Error(e.error);
+      // ASP.NET Core returns problem details: { title, errors } — not { error }
+      // Fall back through known fields to always produce a useful message.
+      const body = await res.json().catch(() => null);
+      const msg =
+        body?.error ??
+        body?.title ??
+        (body?.errors ? JSON.stringify(body.errors) : null) ??
+        `Erro ${res.status}`;
+      throw new Error(msg);
     }
     return res.json();
   }

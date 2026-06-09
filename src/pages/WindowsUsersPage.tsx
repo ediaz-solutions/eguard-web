@@ -23,7 +23,7 @@ function PolicySelector({ userId, currentPolicyId, onChanged }: PolicySelectorPr
       if (newPolicyId === '') {
         const existing = policies
           ?.flatMap(p => p.assignments)
-          .find(a => a.targetType === 'user' && a.targetId === userId);
+          ?.find(a => a.targetType === 'user' && a.targetId === userId);
         if (existing) await api.deleteAssignment(existing.id);
       } else {
         await api.createAssignment(newPolicyId, 'user', userId);

@@ -29,13 +29,16 @@ export const useDeviceOverrides = (id: string | null) =>
 export function useDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
+      // Each call has its own .catch() so a single failure doesn't blank the whole dashboard
       const [devices, policies, todayOverrides] = await Promise.all([
-        api.getDevices(),
-        api.getPolicies(),
+        api.getDevices().catch(() => [] as Device[]),
+        api.getPolicies().catch(() => [] as Policy[]),
         api.getTodayOverrides().catch(() => [] as DeviceOverride[]),
       ]);
 
@@ -53,7 +56,9 @@ export function useDashboard() {
         devices,
         todayOverrides,
       });
-    } catch {} finally { setLoading(false); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao carregar dashboard');
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -62,5 +67,5 @@ export function useDashboard() {
     return () => clearInterval(i);
   }, [reload]);
 
-  return { stats, loading, reload };
+  return { stats, loading, error, reload };
 }

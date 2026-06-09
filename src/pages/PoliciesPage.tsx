@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, Plus, Pencil, Trash2, X, Save, Monitor, User } from 'lucide-react';
+import { Clock, Plus, Pencil, Trash2, X, Save, Monitor, User, AlertCircle } from 'lucide-react';
 import { usePolicies } from '../hooks/useData';
 import { api } from '../services/api';
 import { formatTime } from '../utils';
@@ -22,7 +22,7 @@ const EMPTY_FORM: ProfileForm = {
 };
 
 export default function PoliciesPage() {
-  const { data: policies, loading, reload } = usePolicies();
+  const { data: policies, loading, error: listError, reload } = usePolicies();
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -58,6 +58,7 @@ export default function PoliciesPage() {
 
   async function save() {
     if (!form.name.trim()) { setError('Informe o nome do perfil'); return; }
+    if (form.allowedDays.length === 0) { setError('Selecione pelo menos um dia'); return; }
     setSaving(true); setError('');
     try {
       const payload = {
@@ -173,6 +174,13 @@ export default function PoliciesPage() {
       )}
 
       {/* List */}
+      {listError && !loading && (
+        <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 rounded-lg px-4 py-3 border border-red-500/20">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          Erro ao carregar perfis: {listError}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-32">
           <div className="w-6 h-6 border-2 border-brand-600/30 border-t-brand-500 rounded-full animate-spin" />

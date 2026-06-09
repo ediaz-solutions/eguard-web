@@ -29,14 +29,22 @@ function Badge({ type }: { type: string }) {
 }
 
 export default function DashboardPage() {
-  const { stats, loading, reload } = useDashboard();
+  const { stats, loading, error, reload } = useDashboard();
 
   if (loading && !stats) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-8 h-8 border-2 border-brand-600/30 border-t-brand-500 rounded-full animate-spin" />
     </div>
   );
-  if (!stats) return null;
+  if (!stats) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4 text-surface-400">
+      <ShieldAlert className="w-10 h-10 opacity-40" />
+      <p className="text-sm">{error ?? 'Não foi possível carregar o dashboard.'}</p>
+      <button onClick={reload} className="btn-secondary text-sm flex items-center gap-2">
+        <RefreshCw className="w-4 h-4" />Tentar novamente
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-8">

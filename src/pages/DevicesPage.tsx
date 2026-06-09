@@ -122,7 +122,7 @@ function PolicySelector({ deviceId, currentPolicyId, onChanged }: PolicySelector
         // remove existing assignment
         const existing = policies
           ?.flatMap(p => p.assignments)
-          .find(a => a.targetType === 'device' && a.targetId === deviceId);
+          ?.find(a => a.targetType === 'device' && a.targetId === deviceId);
         if (existing) await api.deleteAssignment(existing.id);
       } else {
         await api.createAssignment(newPolicyId, 'device', deviceId);
